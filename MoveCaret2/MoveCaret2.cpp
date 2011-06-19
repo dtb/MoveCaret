@@ -151,33 +151,40 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 		switch(wmEvent)
 		{
+		// TEXT CHANGE NOTIFICATION
 		case EN_CHANGE:
-		TCHAR buff[64];
-		SendMessage(hwndEdit, WM_GETTEXT, 32, (LPARAM)buff);
-		size_t len = _tcslen(buff);
+			// Get the text
+			TCHAR buff[64];
+			SendMessage(hwndEdit, WM_GETTEXT, 32, (LPARAM)buff);
+			size_t len = _tcslen(buff);
 
-		if(len > 0 && buff[len - 1] == 'h')
-		{
-			if ( len <= 62)
+			// see if the last char is an "h"
+			if(len > 0 && buff[len - 1] == 'h')
 			{
-				_tcsncat(buff, L"a", 1);
-
-				DWORD firstChar, lastChar;
-				SendMessage(hwndEdit, EM_GETSEL, (WPARAM) &firstChar, (LPARAM) &lastChar);
-
-				gaurd = true;
-				SendMessage(hwndEdit, WM_SETTEXT, NULL, (LPARAM) buff);
-				gaurd = false;
-
-				if(firstChar == lastChar && firstChar == len)
+				// if we have enough room in our buffer, add an "a"
+				if ( len <= 62)
 				{
-					firstChar++;
-					lastChar++;
-				}
+					_tcsncat(buff, L"a", 1);
 
-				SendMessage(hwndEdit, EM_SETSEL, (WPARAM) firstChar, (LPARAM) lastChar);
+					// save the initial position of the position
+					DWORD firstChar, lastChar;
+					SendMessage(hwndEdit, EM_GETSEL, (WPARAM) &firstChar, (LPARAM) &lastChar);
+
+					// now set the text, using guard as a mutex to prevent recursing into this handler
+					gaurd = true;
+					SendMessage(hwndEdit, WM_SETTEXT, NULL, (LPARAM) buff);
+					gaurd = false;
+
+					//reset their caret position
+					if(firstChar == lastChar && firstChar == len)
+					{
+						firstChar++;
+						lastChar++;
+					}
+
+					SendMessage(hwndEdit, EM_SETSEL, (WPARAM) firstChar, (LPARAM) lastChar);
+				}
 			}
-		}
 		}
 		break;
 	case WM_PAINT:
@@ -190,18 +197,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_CREATE:
 		// create a text box with the usual border
 		 hwndEdit = CreateWindowEx(
-                                WS_EX_OVERLAPPEDWINDOW, L"Edit",   // predefined class 
+                                WS_EX_OVERLAPPEDWINDOW, // this makes the textbox receive a border
+								L"Edit",   // predefined class 
                                 NULL,         // no window title 
                                 WS_CHILD | WS_VISIBLE | ES_LEFT | WS_BORDER, 
                                 20, 20, 120, 20,   // set size in WM_SIZE message 
                                 hWnd,         // parent window 
                                 NULL,
                                 (HINSTANCE) GetWindowLong(hWnd, GWL_HINSTANCE), 
-                                NULL);        // pointer not needed 
+                                NULL);        
 		 editId = GetWindowLong(hwndEdit, GWL_ID);
-		 // set the text of the text box
-		//SendMessage(hwndEdit, WM_SETTEXT, NULL, (LPARAM)L"This is some text");
-
 		// focus the text box
 		SetFocus(hwndEdit);
 	break;
